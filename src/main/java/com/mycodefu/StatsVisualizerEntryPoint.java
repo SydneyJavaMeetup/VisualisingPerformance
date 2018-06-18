@@ -1,8 +1,9 @@
 package com.mycodefu;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 
 import java.nio.charset.StandardCharsets;
@@ -11,8 +12,9 @@ public class StatsVisualizerEntryPoint {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
+        MongoClient client = MongoClient.createShared(vertx, new JsonObject().put("connection_string", "mongodb://localhost:27017/SydneyJavaMeetup"));
         Router router = Router.router(vertx);
-        handleWebServices(router);
+        handleWebServices(router, client);
         handleHtml(router);
 
         int port = 8090;
@@ -22,12 +24,27 @@ public class StatsVisualizerEntryPoint {
 
     }
 
-    private static void handleWebServices(Router router) {
+    private static void handleWebServices(Router router, MongoClient client) {
         router.get("/getHistogram.json").handler(routingContext -> {
-            routingContext
+            HttpServerResponse httpServerResponse = routingContext
                     .response()
-                    .putHeader("Content-Type", "application/json")
-                    .end(new JsonObject().put("stats", new JsonArray().add("")).encode());
+                    .putHeader("Content-Type", "application/json");
+
+            client.findOne("perfstats", new JsonObject().put("countryCode", "CN"), null, result -> {
+                if (result.succeeded()) {
+                    if (result.result() != null) {
+                        httpServerResponse.end(result.result().encode());
+                    } else {
+                        httpServerResponse
+                                .setStatusCode(404)
+                                .end(new JsonObject().put("failed", "nothing found").encode());
+                    }
+                } else {
+                    httpServerResponse
+                            .setStatusCode(500)
+                            .end(new JsonObject().put("failed", result.cause().getMessage()).encode());
+                }
+            });
         });
     }
 
