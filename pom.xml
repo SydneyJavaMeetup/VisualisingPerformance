@@ -17,7 +17,12 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
-            <version>3.4.1</version>
+            <version>3.5.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-mongo-client</artifactId>
+            <version>3.5.2</version>
         </dependency>
     </dependencies>
 
