@@ -16,18 +16,172 @@
     </div>
 </nav>
 
+<table>
+    <tr>
+        <td><div id="container" style="width: 500px; height: 400px; top: 0; left: 0"></div></td>
+        <td><div id="container2" style="width: 500px; height: 400px; top: 0; left: 0"></div></td>
+    </tr>
+</table>
 <script
         src="https://code.jquery.com/jquery-3.3.1.min.js"
         integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
         crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/data.js"></script>
 
 <script>
     $(document).ready(function () {
-        $.ajax({url:'/getHistogram.json', success: function(data){
-                console.log(data);
+        var getUrlParameter = function getUrlParameter(sParam, defaultValue) {
+            var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+                sURLVariables = sPageURL.split('&'),
+                sParameterName,
+                i;
+
+            for (i = 0; i < sURLVariables.length; i++) {
+                sParameterName = sURLVariables[i].split('=');
+
+                if (sParameterName[0] === sParam) {
+                    return sParameterName[1] === undefined ? true : sParameterName[1];
+                }
+            }
+            return defaultValue;
+        };
+
+        // var fromTimestamp = new Date().getTime() - (Number(getUrlParameter('days', '3')) * 1000 * 60 * 60 * 24);
+        var fromTimestamp = 1529156835987;
+        var bucketSize = getUrlParameter('bucketSize', '500');
+        var statName = getUrlParameter('statName', 'img-large'); //or json-small
+        var userGroup = getUrlParameter('userGroup', ''); //e.g. ChinaPilot
+
+        $.ajax({
+            type: "GET",
+            url:  '/getHistogram.json?countryCode=' + getUrlParameter('countryCode', 'CN') + '&timestamp=' + getUrlParameter('timestamp', fromTimestamp) + '&toTimestamp=' + getUrlParameter('toTimestamp', '0') + '&queryCap=' + getUrlParameter('queryCap', '10000') + '&bucketSize=' + bucketSize + '&statName=' + statName + '&userGroup=' + userGroup,
+            success: function(data, textStatus, request) {
+                var cloudFrontSeries = [];
+                var aliCloudSeries = [];
+                var cloudFrontMax = 0;
+                var aliCloudMax = 0;
+                for (var cdn of data.cdns) {
+                    for (var bucket of cdn.buckets) {
+                        if (cdn.cdn === 'CloudFront') {
+                            cloudFrontSeries.push({x: bucket.bucketUpperMillis, y: bucket.count});
+                            if (bucket.count > cloudFrontMax) {
+                                cloudFrontMax = bucket.count;
+                            }
+                        } else if (cdn.cdn === 'AliCloud') {
+                            aliCloudSeries.push({x: bucket.bucketUpperMillis, y: bucket.count});
+                            if (bucket.count > aliCloudMax) {
+                                aliCloudMax = bucket.count;
+                            }
+                        }
+                    }
+                }
+                initializeHighCharts(aliCloudSeries, cloudFrontSeries, aliCloudMax, cloudFrontMax);
+            },
+            error: function(request, textStatus, err) {
+                console.log(err);
             }
         });
+
+        function initializeHighCharts(initialAliCloudSeries, initialCloudFrontSeries, aliCloudMax, cloudFrontMax) {
+            var drawAliCloudChart = function (containerName, max) {
+                var aliOptions = {
+                    chart: {
+                        type: 'column'
+                    },
+                    title: {
+                        text: 'AliCloud CDN - ' + statName
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Count of Users'
+                        }
+                    },
+                    xAxis: {
+                        title: {
+                            text: 'Time in Milliseconds'
+                        }
+                    }, plotOptions: {
+                        column: {
+                            pointPadding: 0,
+                            borderWidth: 0,
+                            groupPadding: 0,
+                            shadow: true
+                        }
+                    }, tooltip: {
+                        formatter: function () {
+                            return '<b>' + this.series.name + '</b><br/>' +
+                                '[' + (this.x - bucketSize) + ' - ' + this.x + 'ms]' + '<br/>Count of users: ' + this.y;
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'AliCloud',
+                            data: initialAliCloudSeries
+                        }
+                    ]
+                };
+                if (max) {
+                    aliOptions.yAxis.max = max;
+                }
+                var aliCloudChart = Highcharts.chart(containerName, aliOptions);
+                return aliCloudChart.yAxis[0].max;
+            };
+            var drawCloudFrontChart = function (containerName, max) {
+                var cloudFrontChart = Highcharts.chart(containerName, {
+                    chart: {
+                        type: 'column'
+                    },
+                    title: {
+                        text: 'CloudFront CDN - ' + statName
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Count of Users'
+                        },
+                        max: max
+                    },
+                    xAxis: {
+                        title: {
+                            text: 'Time in Milliseconds'
+                        }
+                    }, plotOptions: {
+                        column: {
+                            pointPadding: 0,
+                            borderWidth: 0,
+                            groupPadding: 0,
+                            shadow: true
+                        }
+                    }, tooltip: {
+                        formatter: function () {
+                            return '<b>' + this.series.name + '</b><br/>' +
+                                '[' + (this.x - bucketSize) + ' - ' + this.x + 'ms]' + '<br/>Count of users: ' + this.y;
+                        }
+                    },
+                    series: [
+                        {
+                            name: 'CloudFront',
+                            data: initialCloudFrontSeries,
+                            color: '#b35691'
+                        }
+                    ]
+                });
+                return cloudFrontChart.yAxis[0].max;;
+            };
+
+            if (initialAliCloudSeries && initialAliCloudSeries.length > 0) {
+                if (aliCloudMax > cloudFrontMax) {
+                    var max = drawAliCloudChart('container');
+                    drawCloudFrontChart('container2', max);
+                } else {
+                    var max = drawCloudFrontChart('container2');
+                    drawAliCloudChart('container', max);
+                }
+            } else {
+                drawCloudFrontChart('container');
+            }
+        }
     });
 </script>
 </body>

@@ -1,6 +1,7 @@
 package com.mycodefu;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -30,21 +31,23 @@ public class StatsVisualizerEntryPoint {
                     .response()
                     .putHeader("Content-Type", "application/json");
 
-            client.findOne("perfstats", new JsonObject().put("countryCode", "CN"), null, result -> {
-                if (result.succeeded()) {
-                    if (result.result() != null) {
-                        httpServerResponse.end(result.result().encode());
-                    } else {
-                        httpServerResponse
-                                .setStatusCode(404)
-                                .end(new JsonObject().put("failed", "nothing found").encode());
-                    }
-                } else {
-                    httpServerResponse
-                            .setStatusCode(500)
-                            .end(new JsonObject().put("failed", result.cause().getMessage()).encode());
-                }
-            });
+            HttpServerRequest r = routingContext.request();
+            new PerfStatsDataAccess(client).histogramStatsSince(
+                    r.getParam("timestamp"),
+                    r.getParam("toTimestamp"),
+                    r.getParam("countryCode"),
+                    r.getParam("queryCap"),
+                    r.getParam("bucketSize"),
+                    r.getParam("statName"),
+                    result -> {
+                        if (result.succeeded()) {
+                            httpServerResponse.end(result.result().encode());
+                        } else {
+                            httpServerResponse
+                                    .setStatusCode(500)
+                                    .end(new JsonObject().put("failed", result.cause().getMessage()).encode());
+                        }
+                    });
         });
     }
 
