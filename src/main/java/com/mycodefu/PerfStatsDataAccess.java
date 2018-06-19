@@ -3,7 +3,6 @@ package com.mycodefu;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.impl.FailedFuture;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
@@ -120,7 +119,7 @@ public class PerfStatsDataAccess {
 
                 resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(cdnSummary)));
             } else {
-                resultHandler.handle(FailedFuture.factory.failedFuture(result.cause()));
+                resultHandler.handle(Future.failedFuture(result.cause()));
             }
         });
     }

@@ -29,7 +29,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
 <script src="https://code.highcharts.com/highcharts.js"></script>
 <script src="https://code.highcharts.com/modules/data.js"></script>
-
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+<script src="https://code.highcharts.com/modules/export-data.js"></script>
 <script>
     $(document).ready(function () {
         var getUrlParameter = function getUrlParameter(sParam, defaultValue) {
@@ -115,6 +116,9 @@
                                 '[' + (this.x - bucketSize) + ' - ' + this.x + 'ms]' + '<br/>Count of users: ' + this.y;
                         }
                     },
+                    exporting: {
+                        enabled: true
+                    },
                     series: [
                         {
                             name: 'AliCloud',
@@ -158,6 +162,9 @@
                             return '<b>' + this.series.name + '</b><br/>' +
                                 '[' + (this.x - bucketSize) + ' - ' + this.x + 'ms]' + '<br/>Count of users: ' + this.y;
                         }
+                    },
+                    exporting: {
+                        enabled: true
                     },
                     series: [
                         {
