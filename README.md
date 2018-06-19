@@ -24,3 +24,6 @@ data/img-large.jpeg
 
 :).
 
+### Preso
+
+[https://slides.com/lthompson/visualisingperformance](https://slides.com/lthompson/visualisingperformance)
