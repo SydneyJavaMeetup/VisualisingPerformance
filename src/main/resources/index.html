@@ -18,8 +18,12 @@
 
 <table>
     <tr>
-        <td><div id="container" style="width: 500px; height: 400px; top: 0; left: 0"></div></td>
-        <td><div id="container2" style="width: 500px; height: 400px; top: 0; left: 0"></div></td>
+        <td>
+            <div id="container" style="width: 500px; height: 400px; top: 0; left: 0"></div>
+        </td>
+        <td>
+            <div id="container2" style="width: 500px; height: 400px; top: 0; left: 0"></div>
+        </td>
     </tr>
 </table>
 <script
@@ -57,8 +61,8 @@
 
         $.ajax({
             type: "GET",
-            url:  '/getHistogram.json?countryCode=' + getUrlParameter('countryCode', '') + '&timestamp=' + getUrlParameter('timestamp', fromTimestamp) + '&toTimestamp=' + getUrlParameter('toTimestamp', '0') + '&queryCap=' + getUrlParameter('queryCap', '10000') + '&bucketSize=' + bucketSize + '&statName=' + statName + '&userGroup=' + userGroup,
-            success: function(data, textStatus, request) {
+            url: '/getHistogram.json?countryCode=' + getUrlParameter('countryCode', '') + '&timestamp=' + getUrlParameter('timestamp', fromTimestamp) + '&toTimestamp=' + getUrlParameter('toTimestamp', '0') + '&queryCap=' + getUrlParameter('queryCap', '10000') + '&bucketSize=' + bucketSize + '&statName=' + statName + '&userGroup=' + userGroup,
+            success: function (data, textStatus, request) {
                 var cloudFrontSeries = [];
                 var aliCloudSeries = [];
                 var cloudFrontMax = 0;
@@ -80,7 +84,7 @@
                 }
                 initializeHighCharts(aliCloudSeries, cloudFrontSeries, aliCloudMax, cloudFrontMax);
             },
-            error: function(request, textStatus, err) {
+            error: function (request, textStatus, err) {
                 console.log(err);
             }
         });
@@ -174,7 +178,8 @@
                         }
                     ]
                 });
-                return cloudFrontChart.yAxis[0].max;;
+                return cloudFrontChart.yAxis[0].max;
+                ;
             };
 
             if (initialAliCloudSeries && initialAliCloudSeries.length > 0) {

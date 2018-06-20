@@ -57,6 +57,7 @@ public class PerfStatsDataAccess {
             cdns.add(CDN.AliCloud);
         }
 
+        //Create empty buckets
         cdns.forEach(cdn -> {
             CdnTimes cdnTimes = new CdnTimes();
             cdnTimes.setCdn(cdn);
@@ -70,6 +71,7 @@ public class PerfStatsDataAccess {
             cdnSummary.addCdn(cdnTimes);
         });
 
+        //Fill up the buckets!
         queryStats(timestamp, toTimestamp, countryCode, 60 * 24, statName, cdnSummary, queryCap, bucketSize, includeAliCloud, resultHandler);
     }
 
