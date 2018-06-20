@@ -6,6 +6,7 @@ import java.util.List;
 public class CdnTimes {
     CDN cdn;
     List<CdnBucket> buckets = new ArrayList<>();
+    private int totalCount;
 
     public CdnTimes(CDN cdn) {
         this.cdn = cdn;
@@ -16,6 +17,10 @@ public class CdnTimes {
 
     public CDN getCdn() {
         return cdn;
+    }
+
+    public int getTotalCount() {
+        return totalCount;
     }
 
     public List<CdnBucket> getBuckets() {
@@ -30,4 +35,7 @@ public class CdnTimes {
         buckets.add(bucket);
     }
 
+    public void incrementTotal() {
+        totalCount++;
+    }
 }

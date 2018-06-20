@@ -99,10 +99,12 @@ public class PerfStatsDataAccess {
         System.out.println(query.encodePrettily());
 
         JsonObject fields = new JsonObject().put("timestamp", 1).put("stats", 1);
-        JsonObject sort = new JsonObject().put("timestamp", 1);
+        JsonObject sort = new JsonObject();//.put("timestamp", 1);
         mongoClient.findWithOptions("perfstats", query, new FindOptions().setFields(fields).setSort(sort), result -> {
             if (result.succeeded()) {
-                List<JsonObject> filteredStats = filterStats(result.result(), statName);
+                List<JsonObject> resultData = result.result();
+                System.out.println(String.format("Found %d stats for query.", resultData.size()));
+                List<JsonObject> filteredStats = filterStats(resultData, statName);
 
                 filteredStats.forEach(stat -> {
                     Integer cloudFront = stat.getInteger(CDN.CloudFront.name());
@@ -133,13 +135,16 @@ public class PerfStatsDataAccess {
             JsonObject resultStat = new JsonObject();
             resultStat.put("stats", new JsonArray());
             resultStat.put("timestamp", stat.getJsonObject("timestamp"));
-            for (Object innerStatObject : stat.getJsonArray("stats")) {
-                JsonObject innerStat = (JsonObject)innerStatObject;
-                if (innerStat.getString("name").equals(statName)) {
-                    resultStat.put(innerStat.getString("cdn"), innerStat.getInteger("timeTakenMillis"));
+            JsonArray statsList = stat.getJsonArray("stats");
+            if (statsList != null) {
+                for (Object innerStatObject : statsList) {
+                    JsonObject innerStat = (JsonObject) innerStatObject;
+                    if (innerStat.getString("name").equals(statName)) {
+                        resultStat.put(innerStat.getString("cdn"), innerStat.getInteger("timeTakenMillis"));
+                    }
                 }
+                results.add(resultStat);
             }
-            results.add(resultStat);
         }
         return results;
     }

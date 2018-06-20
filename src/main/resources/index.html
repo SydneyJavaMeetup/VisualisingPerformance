@@ -57,7 +57,7 @@
 
         $.ajax({
             type: "GET",
-            url:  '/getHistogram.json?countryCode=' + getUrlParameter('countryCode', 'CN') + '&timestamp=' + getUrlParameter('timestamp', fromTimestamp) + '&toTimestamp=' + getUrlParameter('toTimestamp', '0') + '&queryCap=' + getUrlParameter('queryCap', '10000') + '&bucketSize=' + bucketSize + '&statName=' + statName + '&userGroup=' + userGroup,
+            url:  '/getHistogram.json?countryCode=' + getUrlParameter('countryCode', '') + '&timestamp=' + getUrlParameter('timestamp', fromTimestamp) + '&toTimestamp=' + getUrlParameter('toTimestamp', '0') + '&queryCap=' + getUrlParameter('queryCap', '10000') + '&bucketSize=' + bucketSize + '&statName=' + statName + '&userGroup=' + userGroup,
             success: function(data, textStatus, request) {
                 var cloudFrontSeries = [];
                 var aliCloudSeries = [];

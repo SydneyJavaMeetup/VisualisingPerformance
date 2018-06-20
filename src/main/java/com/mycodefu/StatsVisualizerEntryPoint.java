@@ -22,6 +22,10 @@ public class StatsVisualizerEntryPoint {
         vertx.createHttpServer().requestHandler(router::accept).listen(port);
 
         System.out.println("Listening on http://localhost:" + port);
+        System.out.println("---");
+        System.out.println("China comparison 3 days: http://localhost:" + port + "/?countryCode=CN&queryCap=4000&bucketSize=100&statName=img-large&timestamp=1529156835987&toTimestamp=0");
+        System.out.println("Germany all time: http://localhost:" + port + "/?countryCode=DE&queryCap=2000&bucketSize=50&statName=img-large&timestamp=1&toTimestamp=0");
+        System.out.println("All data: http://localhost:" + port + "/?queryCap=4000&bucketSize=100&statName=img-large&timestamp=1&toTimestamp=0");
 
     }
 

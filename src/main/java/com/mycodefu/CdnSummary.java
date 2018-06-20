@@ -17,6 +17,7 @@ public class CdnSummary {
     public void incrementBucket(CDN cdn, int bucketEnd) {
         for (CdnTimes cdnTime : cdns) {
             if (cdnTime.cdn.equals(cdn)) {
+                cdnTime.incrementTotal();
                 for (CdnBucket cdnBucket : cdnTime.buckets) {
                     if (cdnBucket.bucketUpperMillis == bucketEnd) {
                         cdnBucket.increment();
