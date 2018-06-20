@@ -1,4 +1,4 @@
-package com.mycodefu;
+package com.mycodefu.data;
 
 public enum CDN {
     CloudFront,

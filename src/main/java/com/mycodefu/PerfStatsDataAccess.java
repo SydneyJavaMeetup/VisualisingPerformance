@@ -1,5 +1,9 @@
 package com.mycodefu;
 
+import com.mycodefu.data.CDN;
+import com.mycodefu.data.CdnBucket;
+import com.mycodefu.data.CdnSummary;
+import com.mycodefu.data.CdnTimes;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
