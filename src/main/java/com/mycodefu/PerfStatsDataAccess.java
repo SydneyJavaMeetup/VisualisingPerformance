@@ -72,7 +72,8 @@ public class PerfStatsDataAccess {
         });
 
         //Fill up the buckets!
-        queryStats(timestamp, toTimestamp, countryCode, 60 * 24, statName, cdnSummary, queryCap, bucketSize, includeAliCloud, resultHandler);
+        JsonObject query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
+        queryDatabase(query, statName, cdnSummary, queryCap, bucketSize, includeAliCloud, resultHandler);
     }
 
 
@@ -80,7 +81,9 @@ public class PerfStatsDataAccess {
         return (int) (Math.ceil(value / bucketSize) * bucketSize);
     }
 
-    private void queryStats(long timestamp, long toTimestamp, String countryCode, int defaultMinutes, String statName, CdnSummary cdnSummary, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
+    private JsonObject createQuery(long timestamp, long toTimestamp, String countryCode, int defaultMinutes) {
+        JsonObject query = new JsonObject();
+
         Instant from;
         if (timestamp <= 0) {
             from = Instant.now().minus(defaultMinutes, ChronoUnit.MINUTES);
@@ -88,25 +91,24 @@ public class PerfStatsDataAccess {
             from = Instant.ofEpochMilli(timestamp);
         }
 
-        JsonObject filters = new JsonObject();
         JsonObject dateFilter = new JsonObject().put("$gte", new JsonObject().put("$date", from.toString()));
         if (toTimestamp > 0) {
             dateFilter.put("$lt", new JsonObject().put("$date", Instant.ofEpochMilli(toTimestamp).toString()));
         }
-        filters.put("timestamp", dateFilter);
+        query.put("timestamp", dateFilter);
         if (StringUtils.isNotBlank(countryCode)) {
-            filters.put("countryCode", countryCode);
+            query.put("countryCode", countryCode);
         }
-        queryForStats(filters, statName, cdnSummary, queryCap, bucketSize, includeAliCloud, resultHandler);
+
+        return query;
     }
 
-    private void queryForStats(JsonObject query, String statName, CdnSummary cdnSummary, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
+    private void queryDatabase(JsonObject query, String statName, CdnSummary cdnSummary, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
         System.out.println("Querying for stats:");
         System.out.println(query.encodePrettily());
 
         JsonObject fields = new JsonObject().put("timestamp", 1).put("stats", 1);
-        JsonObject sort = new JsonObject();//.put("timestamp", 1);
-        mongoClient.findWithOptions("perfstats", query, new FindOptions().setFields(fields).setSort(sort), result -> {
+        mongoClient.findWithOptions("perfstats", query, new FindOptions().setFields(fields), result -> {
             if (result.succeeded()) {
                 List<JsonObject> resultData = result.result();
                 System.out.println(String.format("Found %d stats for query.", resultData.size()));
