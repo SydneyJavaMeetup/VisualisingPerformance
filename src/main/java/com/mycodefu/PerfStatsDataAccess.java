@@ -1,9 +1,8 @@
 package com.mycodefu;
 
-import com.mycodefu.data.CDN;
-import com.mycodefu.data.CdnBucket;
-import com.mycodefu.data.CdnSummary;
-import com.mycodefu.data.CdnTimes;
+import com.mycodefu.data.HistogramBucket;
+import com.mycodefu.data.HistogramList;
+import com.mycodefu.data.Histogram;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -16,7 +15,9 @@ import org.apache.commons.lang3.StringUtils;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class PerfStatsDataAccess {
@@ -27,7 +28,6 @@ public class PerfStatsDataAccess {
     }
 
     public void histogramStatsSince(String timestampString, String toTimestampString, String countryCode, String queryCapString, String bucketSizeString, String statName, Handler<AsyncResult<JsonObject>> resultHandler) {
-        CdnSummary cdnSummary = new CdnSummary();
 
         long timestamp = Long.parseLong(timestampString);
         long toTimestamp =StringUtils.isBlank(toTimestampString) ? Instant.now().toEpochMilli() : Long.parseLong(toTimestampString);
@@ -50,30 +50,43 @@ public class PerfStatsDataAccess {
             statName = "img-large";
         }
 
-        List<CDN> cdns = new ArrayList<>();
-        cdns.add(CDN.CloudFront);
+        List<String> cdns = new ArrayList<>();
+        cdns.add("CloudFront");
         boolean includeAliCloud = "CN".equalsIgnoreCase(countryCode);
         if (includeAliCloud) {
-            cdns.add(CDN.AliCloud);
+            cdns.add("AliCloud");
         }
 
         //Create empty buckets
-        cdns.forEach(cdn -> {
-            CdnTimes cdnTimes = new CdnTimes();
-            cdnTimes.setCdn(cdn);
-            IntStream.rangeClosed(1, numberOfBuckets).map(bucketNo -> bucketNo * bucketSize).forEach(bucketEnd -> {
-                CdnBucket timeBucket = new CdnBucket(String.format("%d-%d", bucketEnd - bucketSize, bucketEnd),
-                        bucketEnd,
-                        0);
-                cdnTimes.addBucket(timeBucket);
-            });
-
-            cdnSummary.addCdn(cdnTimes);
-        });
+        HistogramList histogramList = createEmptyHistogram(bucketSize, numberOfBuckets, cdns);
 
         //Fill up the buckets!
         JsonObject query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
-        queryDatabase(query, statName, cdnSummary, queryCap, bucketSize, includeAliCloud, resultHandler);
+        queryDatabase(query, statName, histogramList, queryCap, bucketSize, includeAliCloud, resultHandler);
+    }
+
+    private HistogramList createEmptyHistogram(int bucketSize, int numberOfBuckets, List<String> groups) {
+        HistogramList histogramList = new HistogramList();
+        histogramList.addHistograms(
+            groups.stream().map(cdn -> {
+                Histogram histogram = new Histogram();
+                histogram.setGroup(cdn);
+                histogram.addBuckets(
+                        IntStream
+                                .rangeClosed(1, numberOfBuckets)
+                                .map(bucketNo -> bucketNo * bucketSize)
+                                .mapToObj(bucketEnd ->
+                                        new HistogramBucket(
+                                                String.format("%d-%d", bucketEnd - bucketSize, bucketEnd),
+                                                bucketEnd,
+                                                        0
+                                        ))
+                                .collect(Collectors.toCollection(ArrayList::new))
+                );
+                return histogram;
+            }).collect(Collectors.toList())
+        );
+        return histogramList;
     }
 
 
@@ -103,7 +116,7 @@ public class PerfStatsDataAccess {
         return query;
     }
 
-    private void queryDatabase(JsonObject query, String statName, CdnSummary cdnSummary, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
+    private void queryDatabase(JsonObject query, String statName, HistogramList histogramList, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
         System.out.println("Querying for stats:");
         System.out.println(query.encodePrettily());
 
@@ -115,19 +128,19 @@ public class PerfStatsDataAccess {
                 List<JsonObject> filteredStats = filterStats(resultData, statName);
 
                 filteredStats.forEach(stat -> {
-                    Integer cloudFront = stat.getInteger(CDN.CloudFront.name());
+                    Integer cloudFront = stat.getInteger("CloudFront");
                     if (cloudFront != null && cloudFront < queryCap && cloudFront > 0) {
-                        cdnSummary.incrementBucket(CDN.CloudFront, roundToBucketEnd(cloudFront, bucketSize));
+                        histogramList.incrementBucket("CloudFront", roundToBucketEnd(cloudFront, bucketSize));
                     }
                     if (includeAliCloud) {
-                        Integer aliCloud = stat.getInteger(CDN.AliCloud.name());
+                        Integer aliCloud = stat.getInteger("AliCloud");
                         if (aliCloud!=null && aliCloud < queryCap && aliCloud > 0) {
-                            cdnSummary.incrementBucket(CDN.AliCloud, roundToBucketEnd(aliCloud, bucketSize));
+                            histogramList.incrementBucket("AliCloud", roundToBucketEnd(aliCloud, bucketSize));
                         }
                     }
                 });
 
-                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(cdnSummary)));
+                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(histogramList)));
             } else {
                 resultHandler.handle(Future.failedFuture(result.cause()));
             }

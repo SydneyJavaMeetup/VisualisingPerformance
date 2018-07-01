@@ -67,15 +67,15 @@
                 var aliCloudSeries = [];
                 var cloudFrontMax = 0;
                 var aliCloudMax = 0;
-                for (var cdn of data.cdns) {
-                    for (var bucket of cdn.buckets) {
-                        if (cdn.cdn === 'CloudFront') {
-                            cloudFrontSeries.push({x: bucket.bucketUpperMillis, y: bucket.count});
+                for (var group of data.histograms) {
+                    for (var bucket of group.buckets) {
+                        if (group.group === 'CloudFront') {
+                            cloudFrontSeries.push({x: bucket.upperBound, y: bucket.count});
                             if (bucket.count > cloudFrontMax) {
                                 cloudFrontMax = bucket.count;
                             }
-                        } else if (cdn.cdn === 'AliCloud') {
-                            aliCloudSeries.push({x: bucket.bucketUpperMillis, y: bucket.count});
+                        } else if (group.group === 'AliCloud') {
+                            aliCloudSeries.push({x: bucket.upperBound, y: bucket.count});
                             if (bucket.count > aliCloudMax) {
                                 aliCloudMax = bucket.count;
                             }
