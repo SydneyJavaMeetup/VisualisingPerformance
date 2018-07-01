@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
+import org.apache.commons.lang3.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 
@@ -13,7 +14,8 @@ public class StatsVisualizerEntryPoint {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
-        MongoClient client = MongoClient.createShared(vertx, new JsonObject().put("connection_string", "mongodb://localhost:27017/SydneyJavaMeetup"));
+        String connectionString = getEnvSetting("MONGO_CONNECTION_STRING", "mongodb://localhost:27017/SydneyJavaMeetup");
+        MongoClient client = MongoClient.createShared(vertx, new JsonObject().put("connection_string", connectionString));
         Router router = Router.router(vertx);
         handleWebServices(router, client);
         handleHtml(router);
@@ -27,6 +29,10 @@ public class StatsVisualizerEntryPoint {
         System.out.println("Germany all time: http://localhost:" + port + "/?countryCode=DE&queryCap=2000&bucketSize=50&statName=img-large&timestamp=1&toTimestamp=0");
         System.out.println("All data: http://localhost:" + port + "/?queryCap=4000&bucketSize=100&statName=img-large&timestamp=1&toTimestamp=0");
 
+    }
+
+    private static String getEnvSetting(String name, String defaultValue) {
+        return StringUtils.isNotBlank(System.getenv(name)) ? System.getenv(name) : defaultValue;
     }
 
     private static void handleWebServices(Router router, MongoClient client) {
