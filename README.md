@@ -24,6 +24,17 @@ data/img-large.jpeg
 
 :).
 
+### TODO: Go Serverless! 
+Let's try converting to a serverless Lambda API instead of VertX.
+
+Ref:
+
+https://github.com/serverless/examples/tree/master/aws-java-simple-http-endpoint
+
+https://dzone.com/articles/how-to-use-mongodb-connection-pooling-on-aws-lambd
+
+https://stackoverflow.com/questions/37415469/how-we-can-use-jdbc-connection-pooling-with-aws-lambda
+
 ### Preso
 
 [https://slides.com/lthompson/visualisingperformance](https://slides.com/lthompson/visualisingperformance)
