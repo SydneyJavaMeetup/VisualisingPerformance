@@ -58,37 +58,12 @@ public class PerfStatsDataAccess {
         }
 
         //Create empty buckets
-        HistogramList histogramList = createEmptyHistogram(bucketSize, numberOfBuckets, cdns);
+        HistogramList histogramList = HistogramList.of(bucketSize, numberOfBuckets, cdns);
 
         //Fill up the buckets!
         JsonObject query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
         queryDatabase(query, statName, histogramList, queryCap, bucketSize, includeAliCloud, resultHandler);
     }
-
-    private HistogramList createEmptyHistogram(int bucketSize, int numberOfBuckets, List<String> groups) {
-        HistogramList histogramList = new HistogramList();
-        histogramList.addHistograms(
-            groups.stream().map(cdn -> {
-                Histogram histogram = new Histogram();
-                histogram.setGroup(cdn);
-                histogram.addBuckets(
-                        IntStream
-                                .rangeClosed(1, numberOfBuckets)
-                                .map(bucketNo -> bucketNo * bucketSize)
-                                .mapToObj(bucketEnd ->
-                                        new HistogramBucket(
-                                                String.format("%d-%d", bucketEnd - bucketSize, bucketEnd),
-                                                bucketEnd,
-                                                        0
-                                        ))
-                                .collect(Collectors.toCollection(ArrayList::new))
-                );
-                return histogram;
-            }).collect(Collectors.toList())
-        );
-        return histogramList;
-    }
-
 
     private int roundToBucketEnd(double value, int bucketSize) {
         return (int) (Math.ceil(value / bucketSize) * bucketSize);
