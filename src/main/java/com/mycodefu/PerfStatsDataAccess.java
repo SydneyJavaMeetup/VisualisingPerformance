@@ -1,24 +1,18 @@
 package com.mycodefu;
 
-import com.mycodefu.data.HistogramBucket;
+import com.mongodb.async.client.MongoClient;
 import com.mycodefu.data.HistogramList;
-import com.mycodefu.data.Histogram;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.FindOptions;
-import io.vertx.ext.mongo.MongoClient;
 import org.apache.commons.lang3.StringUtils;
+import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.concurrent.CompletableFuture;
+
+import static com.mongodb.client.model.Filters.*;
 
 public class PerfStatsDataAccess {
     private MongoClient mongoClient;
@@ -27,7 +21,7 @@ public class PerfStatsDataAccess {
         this.mongoClient = mongoClient;
     }
 
-    public void histogramStatsSince(String timestampString, String toTimestampString, String countryCode, String queryCapString, String bucketSizeString, String statName, Handler<AsyncResult<JsonObject>> resultHandler) {
+    public CompletableFuture<HistogramList> histogramStatsSince(String timestampString, String toTimestampString, String countryCode, String queryCapString, String bucketSizeString, String statName) {
 
         long timestamp = Long.parseLong(timestampString);
         long toTimestamp =StringUtils.isBlank(toTimestampString) ? Instant.now().toEpochMilli() : Long.parseLong(toTimestampString);
@@ -61,16 +55,16 @@ public class PerfStatsDataAccess {
         HistogramList histogramList = HistogramList.of(bucketSize, numberOfBuckets, cdns);
 
         //Fill up the buckets!
-        JsonObject query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
-        queryDatabase(query, statName, histogramList, queryCap, bucketSize, includeAliCloud, resultHandler);
+        Bson query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
+        return queryDatabase(query, statName, histogramList, queryCap, bucketSize, includeAliCloud);
     }
 
     private int roundToBucketEnd(double value, int bucketSize) {
         return (int) (Math.ceil(value / bucketSize) * bucketSize);
     }
 
-    private JsonObject createQuery(long timestamp, long toTimestamp, String countryCode, int defaultMinutes) {
-        JsonObject query = new JsonObject();
+    private Bson createQuery(long timestamp, long toTimestamp, String countryCode, int defaultMinutes) {
+        Bson query;
 
         Instant from;
         if (timestamp <= 0) {
@@ -79,30 +73,28 @@ public class PerfStatsDataAccess {
             from = Instant.ofEpochMilli(timestamp);
         }
 
-        JsonObject dateFilter = new JsonObject().put("$gte", new JsonObject().put("$date", from.toString()));
+        query = gte("timestamp", from);
         if (toTimestamp > 0) {
-            dateFilter.put("$lt", new JsonObject().put("$date", Instant.ofEpochMilli(toTimestamp).toString()));
+            query = and(query, lt("timestamp", Instant.ofEpochMilli(toTimestamp).toString()));
         }
-        query.put("timestamp", dateFilter);
         if (StringUtils.isNotBlank(countryCode)) {
-            query.put("countryCode", countryCode);
+            query = and(query, eq("countryCode", countryCode));
         }
 
         return query;
     }
 
-    private void queryDatabase(JsonObject query, String statName, HistogramList histogramList, Integer queryCap, Integer bucketSize, boolean includeAliCloud, Handler<AsyncResult<JsonObject>> resultHandler) {
-        System.out.println("Querying for stats:");
-        System.out.println(query.encodePrettily());
+    private CompletableFuture<HistogramList> queryDatabase(Bson query, String statName, HistogramList histogramList, Integer queryCap, Integer bucketSize, boolean includeAliCloud) {
+        CompletableFuture<HistogramList> result = new CompletableFuture<>();
 
-        JsonObject fields = new JsonObject().put("timestamp", 1).put("stats", 1);
-        mongoClient.findWithOptions("perfstats", query, new FindOptions().setFields(fields), result -> {
-            if (result.succeeded()) {
-                List<JsonObject> resultData = result.result();
-                System.out.println(String.format("Found %d stats for query.", resultData.size()));
-                List<JsonObject> filteredStats = filterStats(resultData, statName);
-
-                filteredStats.forEach(stat -> {
+        Bson fields = and(eq("timestamp", 1), eq("stats", 1));
+        mongoClient
+                .getDatabase("SydneyJavaMeetup")
+                .getCollection("perfstats")
+                .find(query)
+                .projection(fields)
+                .map(document -> filterStat(statName, document))
+                .forEach(stat -> {
                     Integer cloudFront = stat.getInteger("CloudFront");
                     if (cloudFront != null && cloudFront < queryCap && cloudFront > 0) {
                         histogramList.incrementBucket("CloudFront", roundToBucketEnd(cloudFront, bucketSize));
@@ -113,35 +105,30 @@ public class PerfStatsDataAccess {
                             histogramList.incrementBucket("AliCloud", roundToBucketEnd(aliCloud, bucketSize));
                         }
                     }
-                });
-
-                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(histogramList)));
+        }, (aVoid, throwable) -> {
+            if (throwable != null) {
+                result.completeExceptionally(throwable);
             } else {
-                resultHandler.handle(Future.failedFuture(result.cause()));
+                result.complete(histogramList);
             }
         });
+
+        return result;
     }
 
-    /**
-     * Remove anything other than the large image stats.
-     */
-    private List<JsonObject> filterStats(List<JsonObject> stats, String statName) {
-        List<JsonObject> results = new ArrayList<>(stats.size());
-        for (JsonObject stat : stats) {
-            JsonObject resultStat = new JsonObject();
-            resultStat.put("stats", new JsonArray());
-            resultStat.put("timestamp", stat.getJsonObject("timestamp"));
-            JsonArray statsList = stat.getJsonArray("stats");
-            if (statsList != null) {
-                for (Object innerStatObject : statsList) {
-                    JsonObject innerStat = (JsonObject) innerStatObject;
-                    if (innerStat.getString("name").equals(statName)) {
-                        resultStat.put(innerStat.getString("cdn"), innerStat.getInteger("timeTakenMillis"));
-                    }
+    private Document filterStat(String statName, Document stat) {
+        Document resultStat = new Document();
+        resultStat.put("stats", new ArrayList());
+        resultStat.put("timestamp", stat.getDate("timestamp"));
+        ArrayList statsList = stat.get("stats", ArrayList.class);
+        if (statsList != null) {
+            for (Object innerStatObject : statsList) {
+                Document innerStat = (Document) innerStatObject;
+                if (innerStat.getString("name").equals(statName)) {
+                    resultStat.put(innerStat.getString("cdn"), innerStat.getInteger("timeTakenMillis"));
                 }
-                results.add(resultStat);
             }
         }
-        return results;
+        return resultStat;
     }
 }
