@@ -3,11 +3,6 @@ Talk on visualisation of performance statistics.
 
 Uses MongoDB collections of statistics and HighCharts in the browser to collect statistics.
 
-We're using Vert.x as the web server, just because I fancied trying it!
-
-Ref: https://vertx.io/docs/vertx-web/java/
-
-Ref: https://vertx.io/docs/vertx-mongo-client/java/
 
 #### Data
 The data set we're using is a set of download metrics from CDNs.
@@ -24,12 +19,19 @@ data/img-large.jpeg
 
 :).
 
-### TODO: Go Serverless! 
-Let's try converting to a serverless Lambda API instead of VertX.
+### Go Serverless! 
+We'll use a serverless Lambda to back the API and host in AWS cloud.
 
-Ref:
+Serverless.com Docs:
+https://docs.serverless.com/
 
+Logging:
+https://docs.aws.amazon.com/lambda/latest/dg/java-logging.html#java-logging-log4j2
+
+Sample Java Lambda:
 https://github.com/serverless/examples/tree/master/aws-java-simple-http-endpoint
+
+Mongo connection pooling in Lambda:
 
 https://dzone.com/articles/how-to-use-mongodb-connection-pooling-on-aws-lambd
 
