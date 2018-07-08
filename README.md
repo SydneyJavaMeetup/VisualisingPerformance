@@ -40,3 +40,6 @@ https://stackoverflow.com/questions/37415469/how-we-can-use-jdbc-connection-pool
 ### Preso
 
 [https://slides.com/lthompson/visualisingperformance](https://slides.com/lthompson/visualisingperformance)
+
+### TODO: 
+Update to use the $bucket aggregation framework feature instead of calculating the buckets in code (if poss!).
