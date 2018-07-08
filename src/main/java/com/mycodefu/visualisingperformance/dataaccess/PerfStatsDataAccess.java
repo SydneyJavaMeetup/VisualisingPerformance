@@ -1,7 +1,7 @@
-package com.mycodefu;
+package com.mycodefu.visualisingperformance.dataaccess;
 
 import com.mongodb.async.client.MongoClient;
-import com.mycodefu.data.HistogramList;
+import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;

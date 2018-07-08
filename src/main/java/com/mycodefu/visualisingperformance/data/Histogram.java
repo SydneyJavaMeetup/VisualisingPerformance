@@ -1,4 +1,4 @@
-package com.mycodefu.data;
+package com.mycodefu.visualisingperformance.data;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -1,4 +1,4 @@
-package com.mycodefu.data;
+package com.mycodefu.visualisingperformance.data;
 
 public class HistogramBucket {
     String name;

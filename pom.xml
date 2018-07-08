@@ -6,7 +6,7 @@
 
     <groupId>com.mycodefu</groupId>
     <artifactId>visualizingperformance</artifactId>
-    <version>master-1.0-SNAPSHOT</version>
+    <version>1</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -29,10 +29,26 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.7</version>
         </dependency>
+
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-async</artifactId>
             <version>3.8.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>4.1.17.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
+            <version>4.1.17.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.17.Final</version>
         </dependency>
     </dependencies>
 
