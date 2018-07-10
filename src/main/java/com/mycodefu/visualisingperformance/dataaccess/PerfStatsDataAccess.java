@@ -1,6 +1,11 @@
 package com.mycodefu.visualisingperformance.dataaccess;
 
 import com.mongodb.async.client.MongoClient;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.BsonField;
+import com.mongodb.client.model.BucketOptions;
+import com.mycodefu.visualisingperformance.data.Histogram;
+import com.mycodefu.visualisingperformance.data.HistogramBucket;
 import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.Document;
@@ -9,10 +14,14 @@ import org.bson.conversions.Bson;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.mongodb.client.model.Aggregates.bucket;
+import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.*;
+import static org.apache.logging.log4j.message.MapMessage.MapFormat.JSON;
 
 public class PerfStatsDataAccess {
     private MongoClient mongoClient;
@@ -55,7 +64,7 @@ public class PerfStatsDataAccess {
         HistogramList histogramList = HistogramList.of(bucketSize, numberOfBuckets, cdns);
 
         //Fill up the buckets!
-        Bson query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24);
+        List<Bson> query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24, bucketSize, numberOfBuckets);
         return queryDatabase(query, statName, histogramList, queryCap, bucketSize, includeAliCloud);
     }
 
@@ -63,7 +72,7 @@ public class PerfStatsDataAccess {
         return (int) (Math.ceil(value / bucketSize) * bucketSize);
     }
 
-    private Bson createQuery(long timestamp, long toTimestamp, String countryCode, int defaultMinutes) {
+    private List<Bson> createQuery(long timestamp, long toTimestamp, String countryCode, int defaultMinutes, int bucketSize, int numberOfBuckets) {
         Bson query;
 
         Instant from;
@@ -81,30 +90,36 @@ public class PerfStatsDataAccess {
             query = and(query, eq("countryCode", countryCode));
         }
 
-        return query;
+        BucketOptions options = new BucketOptions();
+        options.defaultBucket("default");
+        options.output(new BsonField("count", eq("$sum", 1)));
+        return Arrays.asList(
+                match(query),
+                bucket("$timestamp",
+                        HistogramList.buckets(bucketSize, numberOfBuckets),
+                        options)
+        );
     }
 
-    private CompletableFuture<HistogramList> queryDatabase(Bson query, String statName, HistogramList histogramList, Integer queryCap, Integer bucketSize, boolean includeAliCloud) {
+    private CompletableFuture<HistogramList> queryDatabase(List<Bson> query, String statName, HistogramList histogramList, Integer queryCap, Integer bucketSize, boolean includeAliCloud) {
         CompletableFuture<HistogramList> result = new CompletableFuture<>();
 
-        Bson fields = and(eq("timestamp", 1), eq("stats", 1));
         mongoClient
                 .getDatabase("SydneyJavaMeetup")
-                .getCollection("perfstats")
-                .find(query)
-                .projection(fields)
-                .map(document -> filterStat(statName, document))
+                .getCollection("PerfStats")
+                .aggregate(query)
                 .forEach(stat -> {
-                    Integer cloudFront = stat.getInteger("CloudFront");
-                    if (cloudFront != null && cloudFront < queryCap && cloudFront > 0) {
-                        histogramList.incrementBucket("CloudFront", roundToBucketEnd(cloudFront, bucketSize));
-                    }
-                    if (includeAliCloud) {
-                        Integer aliCloud = stat.getInteger("AliCloud");
-                        if (aliCloud!=null && aliCloud < queryCap && aliCloud > 0) {
-                            histogramList.incrementBucket("AliCloud", roundToBucketEnd(aliCloud, bucketSize));
-                        }
-                    }
+                    System.out.println(stat);
+//                    Integer cloudFront = stat.getInteger("CloudFront");
+//                    if (cloudFront != null && cloudFront < queryCap && cloudFront > 0) {
+//                        histogramList.incrementBucket("CloudFront", roundToBucketEnd(cloudFront, bucketSize));
+//                    }
+//                    if (includeAliCloud) {
+//                        Integer aliCloud = stat.getInteger("AliCloud");
+//                        if (aliCloud!=null && aliCloud < queryCap && aliCloud > 0) {
+//                            histogramList.incrementBucket("AliCloud", roundToBucketEnd(aliCloud, bucketSize));
+//                        }
+//                    }
         }, (aVoid, throwable) -> {
             if (throwable != null) {
                 result.completeExceptionally(throwable);
@@ -114,21 +129,5 @@ public class PerfStatsDataAccess {
         });
 
         return result;
-    }
-
-    private Document filterStat(String statName, Document stat) {
-        Document resultStat = new Document();
-        resultStat.put("stats", new ArrayList());
-        resultStat.put("timestamp", stat.getDate("timestamp"));
-        ArrayList statsList = stat.get("stats", ArrayList.class);
-        if (statsList != null) {
-            for (Object innerStatObject : statsList) {
-                Document innerStat = (Document) innerStatObject;
-                if (innerStat.getString("name").equals(statName)) {
-                    resultStat.put(innerStat.getString("cdn"), innerStat.getInteger("timeTakenMillis"));
-                }
-            }
-        }
-        return resultStat;
     }
 }

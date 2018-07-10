@@ -39,6 +39,14 @@ public class HistogramList {
         return of(bucketSize, numberOfBuckets, Collections.singletonList(""));
     }
 
+    public static List<Integer> buckets(int bucketSize, int numberOfBuckets) {
+        return IntStream
+                .rangeClosed(0, numberOfBuckets)
+                .map(bucketNo -> bucketNo * bucketSize)
+                .boxed()
+                .collect(Collectors.toList());
+    }
+
     public static HistogramList of(int bucketSize, int numberOfBuckets, List<String> groups) {
         HistogramList histogramList = new HistogramList();
         histogramList.addHistograms(

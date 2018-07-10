@@ -1,0 +1,1 @@
+db.PerfStats.createIndex({statName:1, timeTakenMillis: 1})
