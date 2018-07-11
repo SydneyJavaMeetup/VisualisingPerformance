@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 public class PerfStatsHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
@@ -26,15 +25,13 @@ public class PerfStatsHandler implements RequestHandler<Map<String, Object>, Api
 
         try {
             Map<String, String> queryStringParameters = input.get("queryStringParameters") == null ? new HashMap<>() : (Map<String, String>)input.get("queryStringParameters");
-            Future<HistogramList> histogramListFuture = new PerfStatsDataAccess(MongoConnection.get()).histogramStatsSince(
+            HistogramList value = new PerfStatsDataAccess(MongoConnection.get()).histogramStatsSince(
                     queryStringParameters.get("timestamp"),
                     queryStringParameters.get("toTimestamp"),
                     queryStringParameters.get("countryCode"),
                     queryStringParameters.get("queryCap"),
                     queryStringParameters.get("bucketSize"),
                     queryStringParameters.get("statName"));
-
-            HistogramList value = histogramListFuture.get();
 
             return ApiGatewayResponse.builder()
                     .setStatusCode(200)

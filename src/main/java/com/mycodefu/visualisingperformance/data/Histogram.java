@@ -39,7 +39,7 @@ public class Histogram {
         this.buckets.addAll(buckets);
     }
 
-    public void incrementTotal() {
-        totalCount++;
+    public void incrementTotal(Integer count) {
+        totalCount+=count;
     }
 }

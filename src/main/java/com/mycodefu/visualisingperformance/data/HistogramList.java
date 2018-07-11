@@ -21,20 +21,6 @@ public class HistogramList {
         this.histograms.addAll(histograms);
     }
 
-    public void incrementBucket(String group, int bucketEnd) {
-        for (Histogram histogram : histograms) {
-            if (histogram.group.equals(group)) {
-                histogram.incrementTotal();
-                for (HistogramBucket histogramBucket : histogram.buckets) {
-                    if (histogramBucket.upperBound == bucketEnd) {
-                        histogramBucket.increment();
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
     public static HistogramList of(int bucketSize, int numberOfBuckets) {
         return of(bucketSize, numberOfBuckets, Collections.singletonList(""));
     }
