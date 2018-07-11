@@ -6,7 +6,6 @@ import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.mongodb.async.client.MongoClient;
-import com.mongodb.client.model.BsonField;
 import com.mongodb.client.model.BucketOptions;
 import com.mycodefu.visualisingperformance.data.Histogram;
 import com.mycodefu.visualisingperformance.data.HistogramList;
@@ -122,9 +121,8 @@ public class PerfStatsDataAccess {
             query = and(query, eq("statName", statName));
         }
 
-        BucketOptions options = new BucketOptions();
-        options.defaultBucket("default");
-        options.output(new BsonField("count", eq("$sum", 1)));
+        BucketOptions options = new BucketOptions()
+                .defaultBucket("default");
         return Arrays.asList(
                 match(query),
                 bucket("$timeTakenMillis",
