@@ -1,5 +1,10 @@
 package com.mycodefu.visualisingperformance.dataaccess;
 
+import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
+import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
+import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.client.model.BsonField;
 import com.mongodb.client.model.BucketOptions;
@@ -18,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static com.mongodb.client.model.Aggregates.bucket;
 import static com.mongodb.client.model.Aggregates.match;
@@ -27,9 +33,11 @@ public class PerfStatsDataAccess {
     static final Logger log = LogManager.getLogger(PerfStatsDataAccess.class);
 
     private MongoClient mongoClient;
+    private boolean logMetrics;
 
-    public PerfStatsDataAccess(MongoClient mongoClient) {
+    public PerfStatsDataAccess(MongoClient mongoClient, boolean logMetrics) {
         this.mongoClient = mongoClient;
+        this.logMetrics = logMetrics;
     }
 
     public HistogramList histogramStatsSince(String timestampString, String toTimestampString, String countryCode, String queryCapString, String bucketSizeString, String statNameParameter) {
@@ -65,22 +73,25 @@ public class PerfStatsDataAccess {
         }
 
         Instant start = Instant.now();
-        HistogramList histogramList = new HistogramList();
-        cdns.parallelStream()
-                .map(cdn -> {
-                    List<Bson> query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24, bucketSize, numberOfBuckets, cdn, statName);
-                    return queryDatabase(query, bucketSize, cdn, numberOfBuckets);
-                })
-                .map(histogramCompletableFuture -> {
-                    try {
-                        return histogramCompletableFuture.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        throw new RuntimeException("Failed querying for histogram.", e);
-                    }
-                })
-                .forEach(histogramList::addHistogram);
 
-        log.info(String.format("Finished histogram list in %sms", Duration.between(start, Instant.now()).toMillis()));
+        HistogramList histogramList = new HistogramList();
+        List<CompletableFuture<Histogram>> futures = cdns.stream().map(cdn -> {
+                List<Bson> query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24, bucketSize, numberOfBuckets, cdn, statName);
+                return queryDatabase(query, bucketSize, cdn, numberOfBuckets);
+            }).collect(Collectors.toList());
+
+        for (CompletableFuture<Histogram> future : futures) {
+            try {
+                Histogram histogram = future.get();
+                histogramList.addHistogram(histogram);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException("Failed querying for histogram.", e);
+            }
+        }
+
+        long totalDurationMillis = Duration.between(start, Instant.now()).toMillis();
+        log.info(String.format("Finished histogram list in %sms", totalDurationMillis));
+        writeMetric("HistogramListRequest", totalDurationMillis);
 
         return histogramList;
     }
@@ -141,7 +152,6 @@ public class PerfStatsDataAccess {
                         Integer lowerBound = (Integer) id;
                         Integer upperBound = lowerBound + bucketSize;
                         Integer count = stat.getInteger("count");
-                        String name = String.format("%d-%d", lowerBound, upperBound);
 
                         histogram.setBucketCount(upperBound, count);
                         histogram.incrementTotal(count);
@@ -150,14 +160,39 @@ public class PerfStatsDataAccess {
                     if (throwable != null) {
                         result.completeExceptionally(throwable);
                     } else {
+                        long durationMillis = Duration.between(start, Instant.now()).toMillis();
                         if (log.isTraceEnabled()) {
-                            log.trace(String.format("Finished histogram for %s in %sms", histogramName, Duration.between(start, Instant.now()).toMillis()));
+                            log.trace(String.format("Finished histogram for %s in %sms", histogramName, durationMillis));
                         }
+
+                        writeMetric("HistogramAggregateRequest", durationMillis);
 
                         result.complete(histogram);
                     }
                 });
 
         return result;
+    }
+
+    private void writeMetric(String name, double durationMillis) {
+        if (logMetrics) {
+            try {
+                final AmazonCloudWatch cw =
+                        AmazonCloudWatchClientBuilder.defaultClient();
+
+                MetricDatum datum = new MetricDatum()
+                        .withMetricName(name)
+                        .withUnit(StandardUnit.Milliseconds)
+                        .withValue(durationMillis);
+
+                PutMetricDataRequest request = new PutMetricDataRequest()
+                        .withNamespace("VISUALISING_PERFORMANCE")
+                        .withMetricData(datum);
+
+                cw.putMetricData(request);
+            } catch (Exception e) {
+                log.error("Failed to write CloudWatch metric.", e);
+            }
+        }
     }
 }

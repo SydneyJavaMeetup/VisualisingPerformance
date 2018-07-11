@@ -15,8 +15,8 @@ public class PerfStatsDataAccessTest {
     @Test
     public void histogramStatsSince() throws JsonProcessingException {
         //warmup
-        for (int i=0; i < 10; i++) {
-            HistogramList histogramList = new PerfStatsDataAccess(MongoConnection.get()).histogramStatsSince(
+        for (int i=0; i < 15; i++) {
+            HistogramList histogramList = new PerfStatsDataAccess(MongoConnection.get(), false).histogramStatsSince(
                     "1529156835987",
                     "0",
                     "CN",
