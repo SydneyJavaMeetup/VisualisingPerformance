@@ -29,4 +29,8 @@ public class HistogramBucket {
     public void increment() {
         count++;
     }
+
+    public void setCount(Integer count) {
+        this.count = count;
+    }
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 public class PerfStatsDataAccessTest {
 
     /**
@@ -13,14 +15,18 @@ public class PerfStatsDataAccessTest {
     @Test
     public void histogramStatsSince() throws JsonProcessingException {
         //warmup
-        for (int i=0; i < 100; i++) {
+        for (int i=0; i < 10; i++) {
             HistogramList histogramList = new PerfStatsDataAccess(MongoConnection.get()).histogramStatsSince(
                     "1529156835987",
                     "0",
-                    "DE",
+                    "CN",
                     "3000",
                     "100",
                     "img-large");
+
+            assertEquals(2, histogramList.getHistograms().size());
+            assertEquals(30, histogramList.getHistograms().get(0).getBuckets().size());
+            assertEquals(30, histogramList.getHistograms().get(1).getBuckets().size());
         }
     }
 }

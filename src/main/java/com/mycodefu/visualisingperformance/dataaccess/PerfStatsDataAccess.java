@@ -4,7 +4,6 @@ import com.mongodb.async.client.MongoClient;
 import com.mongodb.client.model.BsonField;
 import com.mongodb.client.model.BucketOptions;
 import com.mycodefu.visualisingperformance.data.Histogram;
-import com.mycodefu.visualisingperformance.data.HistogramBucket;
 import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -70,7 +69,7 @@ public class PerfStatsDataAccess {
         cdns.parallelStream()
                 .map(cdn -> {
                     List<Bson> query = createQuery(timestamp, toTimestamp, countryCode, 60 * 24, bucketSize, numberOfBuckets, cdn, statName);
-                    return queryDatabase(query, bucketSize, cdn);
+                    return queryDatabase(query, bucketSize, cdn, numberOfBuckets);
                 })
                 .map(histogramCompletableFuture -> {
                     try {
@@ -123,7 +122,7 @@ public class PerfStatsDataAccess {
         );
     }
 
-    private CompletableFuture<Histogram> queryDatabase(List<Bson> query, Integer bucketSize, String histogramName) {
+    private CompletableFuture<Histogram> queryDatabase(List<Bson> query, Integer bucketSize, String histogramName, int numberOfBuckets) {
         CompletableFuture<Histogram> result = new CompletableFuture<>();
 
         Instant start = Instant.now();
@@ -131,7 +130,7 @@ public class PerfStatsDataAccess {
             log.trace(String.format("Started histogram query for %s...", histogramName));
         }
 
-        Histogram histogram = new Histogram(histogramName);
+        Histogram histogram = Histogram.of(bucketSize, numberOfBuckets, histogramName);
         mongoClient
                 .getDatabase("SydneyJavaMeetup")
                 .getCollection("PerfStats")
@@ -144,8 +143,7 @@ public class PerfStatsDataAccess {
                         Integer count = stat.getInteger("count");
                         String name = String.format("%d-%d", lowerBound, upperBound);
 
-                        HistogramBucket histogramBucket = new HistogramBucket(name, upperBound, count);
-                        histogram.addBucket(histogramBucket);
+                        histogram.setBucketCount(upperBound, count);
                         histogram.incrementTotal(count);
                     }
                 }, (aVoid, throwable) -> {

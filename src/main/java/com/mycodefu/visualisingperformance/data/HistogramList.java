@@ -36,23 +36,7 @@ public class HistogramList {
     public static HistogramList of(int bucketSize, int numberOfBuckets, List<String> groups) {
         HistogramList histogramList = new HistogramList();
         histogramList.addHistograms(
-                groups.stream().map(group -> {
-                    Histogram histogram = new Histogram();
-                    histogram.setGroup(group);
-                    histogram.addBuckets(
-                            IntStream
-                                    .rangeClosed(1, numberOfBuckets)
-                                    .map(bucketNo -> bucketNo * bucketSize)
-                                    .mapToObj(bucketEnd ->
-                                            new HistogramBucket(
-                                                    String.format("%d-%d", bucketEnd - bucketSize, bucketEnd),
-                                                    bucketEnd,
-                                                    0
-                                            ))
-                                    .collect(Collectors.toCollection(ArrayList::new))
-                    );
-                    return histogram;
-                }).collect(Collectors.toList())
+                groups.stream().map(group -> Histogram.of(bucketSize, numberOfBuckets, group)).collect(Collectors.toList())
         );
         return histogramList;
     }
