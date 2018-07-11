@@ -81,9 +81,7 @@ public class PerfStatsDataAccess {
                 })
                 .forEach(histogramList::addHistogram);
 
-        if (log.isTraceEnabled()) {
-            log.trace(String.format("Finished histogram list in %sms", Duration.between(start, Instant.now()).toMillis()));
-        }
+        log.info(String.format("Finished histogram list in %sms", Duration.between(start, Instant.now()).toMillis()));
 
         return histogramList;
     }
