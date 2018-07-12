@@ -19,10 +19,12 @@ public class PerfStatsHandler implements RequestHandler<Map<String, Object>, Api
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
-        try {
-            log.info("event:" + JsonUtil.mapper.writeValueAsString(input));
-        } catch (JsonProcessingException ignored) {}
-
+        if (log.isTraceEnabled()) {
+            try {
+                log.trace("event:" + JsonUtil.mapper.writeValueAsString(input));
+            } catch (JsonProcessingException ignored) {
+            }
+        }
         try {
             Map<String, String> queryStringParameters = input.get("queryStringParameters") == null ? new HashMap<>() : (Map<String, String>)input.get("queryStringParameters");
             HistogramList value = new PerfStatsDataAccess(MongoConnection.get(), true).histogramStatsSince(

@@ -4,6 +4,7 @@ import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder;
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
+import com.amazonaws.services.cloudwatch.model.PutMetricDataResult;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.client.model.BucketOptions;
@@ -187,7 +188,9 @@ public class PerfStatsDataAccess {
                         .withNamespace("VISUALISING_PERFORMANCE")
                         .withMetricData(datum);
 
-                cw.putMetricData(request);
+                PutMetricDataResult putMetricDataResult = cw.putMetricData(request);
+                log.info(putMetricDataResult.getSdkResponseMetadata());
+
             } catch (Exception e) {
                 log.error("Failed to write CloudWatch metric.", e);
             }

@@ -10,7 +10,11 @@ provider:
   timeout: 30
   environment:
     MONGO_CONNECTION_STRING: ${file(./secrets.json):MONGO_CONNECTION_STRING}
-
+  iamRoleStatements:
+    -  Effect: "Allow"
+       Action:
+         - "cloudwatch:PutMetricData"
+       Resource: "*"
 package:
   artifact: target/visualizingperformance-1.jar
 
