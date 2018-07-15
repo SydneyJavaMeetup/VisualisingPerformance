@@ -122,6 +122,9 @@ public class PerfStatsDataAccess {
             query = and(query, eq("statName", statName));
         }
 
+        //todo: add the range of acceptable values to the search:
+        // e.g. "timeTakenMillis": {"$gt": 0, "$lt":3000}
+
         BucketOptions options = new BucketOptions()
                 .defaultBucket("default");
         return Arrays.asList(
