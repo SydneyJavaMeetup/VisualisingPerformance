@@ -3,15 +3,20 @@ package com.mycodefu.visualisingperformance;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.mongodb.async.client.MongoCollection;
 import com.mycodefu.visualisingperformance.data.ApiGatewayResponse;
 import com.mycodefu.visualisingperformance.data.HistogramList;
 import com.mycodefu.visualisingperformance.dataaccess.MongoConnection;
 import com.mycodefu.visualisingperformance.dataaccess.PerfStatsDataAccess;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bson.Document;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.mycodefu.visualisingperformance.dataaccess.MongoConnection.DATABASE_NAME;
+import static com.mycodefu.visualisingperformance.dataaccess.MongoConnection.STATS_COLLECTION_NAME;
 
 public class PerfStatsHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
@@ -27,7 +32,10 @@ public class PerfStatsHandler implements RequestHandler<Map<String, Object>, Api
         }
         try {
             Map<String, String> queryStringParameters = input.get("queryStringParameters") == null ? new HashMap<>() : (Map<String, String>)input.get("queryStringParameters");
-            HistogramList value = new PerfStatsDataAccess(MongoConnection.get(), true)
+            MongoCollection<Document> collection = MongoConnection.get()
+                    .getDatabase(DATABASE_NAME)
+                    .getCollection(STATS_COLLECTION_NAME);
+            HistogramList value = new PerfStatsDataAccess(collection, true)
                     .histogramStatsSince(
                         queryStringParameters.get("timestamp"),
                         queryStringParameters.get("toTimestamp"),

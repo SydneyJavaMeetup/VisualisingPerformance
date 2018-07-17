@@ -6,13 +6,14 @@ import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
 import com.amazonaws.services.cloudwatch.model.PutMetricDataResult;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.mongodb.async.client.MongoClient;
+import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.BucketOptions;
 import com.mycodefu.visualisingperformance.data.Histogram;
 import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bson.Document;
 import org.bson.conversions.Bson;
 
 import java.time.Duration;
@@ -32,11 +33,11 @@ import static com.mongodb.client.model.Filters.*;
 public class PerfStatsDataAccess {
     static final Logger log = LogManager.getLogger(PerfStatsDataAccess.class);
 
-    private MongoClient mongoClient;
     private boolean logMetrics;
+    private MongoCollection<Document> collection;
 
-    public PerfStatsDataAccess(MongoClient mongoClient, boolean logMetrics) {
-        this.mongoClient = mongoClient;
+    public PerfStatsDataAccess(MongoCollection<Document> collection, boolean logMetrics) {
+        this.collection = collection;
         this.logMetrics = logMetrics;
     }
 
@@ -144,9 +145,7 @@ public class PerfStatsDataAccess {
         }
 
         Histogram histogram = Histogram.of(bucketSize, numberOfBuckets, histogramName);
-        mongoClient
-                .getDatabase("SydneyJavaMeetup")
-                .getCollection("PerfStats")
+        collection
                 .aggregate(query)
                 .forEach(stat -> {
                     Object id = stat.get("_id");
