@@ -5,6 +5,7 @@ import com.mycodefu.visualisingperformance.data.HistogramList;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PerfStatsDataAccessTest {
 
@@ -27,6 +28,9 @@ public class PerfStatsDataAccessTest {
             assertEquals(2, histogramList.getHistograms().size());
             assertEquals(30, histogramList.getHistograms().get(0).getBuckets().size());
             assertEquals(30, histogramList.getHistograms().get(1).getBuckets().size());
+
+            //check bucket 0 had a greater than 0 count
+            assertTrue(histogramList.getHistograms().get(0).getBuckets().get(0).getCount() > 0);
         }
     }
 }
