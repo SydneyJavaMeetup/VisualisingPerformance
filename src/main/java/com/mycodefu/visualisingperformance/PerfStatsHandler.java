@@ -27,14 +27,15 @@ public class PerfStatsHandler implements RequestHandler<Map<String, Object>, Api
         }
         try {
             Map<String, String> queryStringParameters = input.get("queryStringParameters") == null ? new HashMap<>() : (Map<String, String>)input.get("queryStringParameters");
-            HistogramList value = new PerfStatsDataAccess(MongoConnection.get(), true).histogramStatsSince(
-                    queryStringParameters.get("timestamp"),
-                    queryStringParameters.get("toTimestamp"),
-                    queryStringParameters.get("countryCode"),
-                    queryStringParameters.get("queryCap"),
-                    queryStringParameters.get("bucketSize"),
-                    queryStringParameters.get("statName")
-            );
+            HistogramList value = new PerfStatsDataAccess(MongoConnection.get(), true)
+                    .histogramStatsSince(
+                        queryStringParameters.get("timestamp"),
+                        queryStringParameters.get("toTimestamp"),
+                        queryStringParameters.get("countryCode"),
+                        queryStringParameters.get("queryCap"),
+                        queryStringParameters.get("bucketSize"),
+                        queryStringParameters.get("statName")
+                    );
 
             return ApiGatewayResponse.builder()
                     .setStatusCode(200)
