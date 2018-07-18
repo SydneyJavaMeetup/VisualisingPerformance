@@ -42,8 +42,10 @@ jobs: # a collection of steps
       - attach_workspace:
           at: /tmp/visualising-performance
       - run:
-          name: Run from attached workspace
-          command: cd /tmp/visualising-performance
+          name: Move code from attached workspace
+          command: mv /tmp/visualising-performance/* .
+
+      - run: ls
 
       - restore_cache:
           keys:
