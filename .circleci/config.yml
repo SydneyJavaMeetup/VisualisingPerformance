@@ -29,4 +29,45 @@ jobs: # a collection of steps
 
       - store_artifacts: # store the uberjar as an artifact
           path: target/visualizingperformance-1.jar
-      # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+
+      - persist_to_workspace:
+          root: target
+          paths:
+            - 'visualizingperformance-1.jar'
+  deploy:
+    docker:
+      - image: circleci/node:7.10
+    working_directory: ~/visualising-performance
+    steps:
+      - attach_workspace:
+          at: /tmp/target
+      - run:
+          name: Copy to target
+          command: mkdir -p target && mv /tmp/target/* target/
+
+      - restore_cache:
+          keys:
+          - serverless-dependency
+
+      - run: npm install serverless
+
+      - save_cache:
+          paths:
+            - node_modules
+          key: serverless-dependency
+
+      - run:
+          name: Deploy API to AWS
+          command: ./node_modules/.bin/sls deploy
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
