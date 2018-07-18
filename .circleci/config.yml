@@ -31,19 +31,19 @@ jobs: # a collection of steps
           path: target/visualizingperformance-1.jar
 
       - persist_to_workspace:
-          root: target
+          root: ~/visualising-performance
           paths:
-            - 'visualizingperformance-1.jar'
+            - '*'
   deploy:
     docker:
       - image: circleci/node:7.10
     working_directory: ~/visualising-performance
     steps:
       - attach_workspace:
-          at: /tmp/target
+          at: /tmp/visualising-performance
       - run:
-          name: Copy to target
-          command: mkdir -p target && mv /tmp/target/* target/
+          name: Run from attached workspace
+          command: cd /tmp/visualising-performance
 
       - restore_cache:
           keys:
