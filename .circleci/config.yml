@@ -59,6 +59,10 @@ jobs: # a collection of steps
           key: serverless-dependency
 
       - run:
+          name: Write secrets
+          command: echo "{\"MONGO_CONNECTION_STRING\": \""$MONGO_CONNECTION_STRING"\"}" > secrets.json
+
+      - run:
           name: Deploy API to AWS
           command: ./node_modules/.bin/sls deploy
 
