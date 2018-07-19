@@ -60,7 +60,7 @@ jobs: # a collection of steps
 
       - run:
           name: Write secrets
-          command: echo "{\"MONGO_CONNECTION_STRING\":\""$MONGO_CONNECTION_STRING"\"}" > secrets.json
+          command: echo "{\"MONGO_CONNECTION_STRING\":\""$SECRET_MONGO_CONNECTION_STRING"\"}" > secrets.json
 
       - run:
           name: Deploy API to AWS

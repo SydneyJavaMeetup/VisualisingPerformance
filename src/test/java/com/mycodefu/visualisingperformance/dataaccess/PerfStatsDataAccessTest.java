@@ -60,6 +60,7 @@ public class PerfStatsDataAccessTest {
         countDownLatch.await(10, TimeUnit.SECONDS);
 
         HistogramList histogramList = result.get();
+        assertNotNull("Failed to return a result", histogramList.getHistograms());
         assertEquals(2, histogramList.getHistograms().size());
         assertEquals(30, histogramList.getHistograms().get(0).getBuckets().size());
         assertEquals(30, histogramList.getHistograms().get(1).getBuckets().size());
