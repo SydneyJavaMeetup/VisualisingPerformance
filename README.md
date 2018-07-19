@@ -9,7 +9,7 @@ Uses MongoDB collections of statistics and HighCharts in the browser to collect 
 
 ### Running Site
 
-[https://slides.com/lthompson/visualisingperformance](https://slides.com/lthompson/visualisingperformance)
+[https://visualisingperformance.mycodefu.com/ui](https://visualisingperformance.mycodefu.com/ui)
 (built by CircleCI)
 
 [![CircleCI](https://circleci.com/gh/SydneyJavaMeetup/VisualisingPerformance.svg?style=svg)](https://circleci.com/gh/SydneyJavaMeetup/VisualisingPerformance)
