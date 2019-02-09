@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.mycodefu.visualisingperformance.dataaccess.MongoConnection.DATABASE_NAME;
@@ -30,36 +29,19 @@ public class PerfStatsDataAccessTest {
      */
     @Test
     public void histogramStatsSince() throws IOException, InterruptedException {
-        InputStream testDataResource = PerfStatsDataAccessTest.class.getResourceAsStream("/test-data.json");
-        String testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
-        List<InsertOneModel<Document>> testData = Arrays.stream(testDataString.split("\n")).map(Document::parse).map(InsertOneModel::new).collect(Collectors.toList());
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        AtomicReference<HistogramList> result = new AtomicReference<>();
-        MongoCollection<Document> collection = MongoConnection.get().getDatabase(DATABASE_NAME).getCollection("testcollection");
-        collection.drop((aVoid, throwable) -> {
-            assertNull(throwable);
-            collection.bulkWrite(testData, (bulkWriteResult, throwable2) -> {
-                assertNull(throwable2);
+        MongoCollection<Document> collection = intializeTestData();
 
-                for (int i=0; i < 15; i++) {
-                    HistogramList histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
-                            "1528736400000",
-                            "0",
-                            "CN",
-                            "3000",
-                            "100",
-                            "img-large");
+        HistogramList histogramList = null;
+        for (int i=0; i < 15; i++) {
+            histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
+                    "1528736400000",
+                    "0",
+                    "CN",
+                    "3000",
+                    "100",
+                    "img-large");
+        }
 
-                    result.set(histogramList);
-
-                }
-                countDownLatch.countDown();
-            });
-        });
-
-        countDownLatch.await(10, TimeUnit.SECONDS);
-
-        HistogramList histogramList = result.get();
         assertNotNull("Failed to return a result", histogramList.getHistograms());
         assertEquals(2, histogramList.getHistograms().size());
         assertEquals(30, histogramList.getHistograms().get(0).getBuckets().size());
@@ -77,5 +59,22 @@ public class PerfStatsDataAccessTest {
 
         //check bucket 0 had a greater than 0 count
         assertTrue(histogramList.getHistograms().get(0).getBuckets().get(0).getCount() > 0);
+    }
+
+    private MongoCollection<Document> intializeTestData() throws IOException, InterruptedException {
+        InputStream testDataResource = PerfStatsDataAccessTest.class.getResourceAsStream("/test-data.json");
+        String testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
+        List<InsertOneModel<Document>> testData = Arrays.stream(testDataString.split("\n")).map(Document::parse).map(InsertOneModel::new).collect(Collectors.toList());
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        MongoCollection<Document> collection = MongoConnection.get().getDatabase(DATABASE_NAME).getCollection("testcollection");
+        collection.drop((aVoid, throwable) -> {
+            assertNull(throwable);
+            collection.bulkWrite(testData, (bulkWriteResult, throwable2) -> {
+                assertNull(throwable2);
+                countDownLatch.countDown();
+            });
+        });
+        countDownLatch.await(10, TimeUnit.SECONDS);
+        return collection;
     }
 }
