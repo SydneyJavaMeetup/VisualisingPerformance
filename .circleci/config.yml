@@ -24,7 +24,7 @@ jobs: # a collection of steps
 
       - run: |
          sed -i "/s/yourcoverallsprojectrepositorytoken/"$SECRET_COVERALLS_CODE"/g" pom.xml
-         mvn package # run the actual tests
+         mvn package coveralls:report 
 
       - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
           path: target/surefire-reports
