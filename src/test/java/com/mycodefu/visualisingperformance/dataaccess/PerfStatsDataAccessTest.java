@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.mycodefu.visualisingperformance.dataaccess.MongoConnection.DATABASE_NAME;
@@ -24,42 +23,27 @@ import static org.junit.Assert.*;
 
 public class PerfStatsDataAccessTest {
 
+    private static MongoCollection<Document> collection = intializeTestData();
+
     /**
      * Note: requires local mongodb with the PerfStats collection in the SydneyJavaMeetup database, e.g. run this from the data directory after unzipping the PerfStats.json.zip file:
      * mongoimport PerfStats.json -d SydneyJavaMeetup
      */
     @Test
     public void histogramStatsSince() throws IOException, InterruptedException {
-        InputStream testDataResource = PerfStatsDataAccessTest.class.getResourceAsStream("/test-data.json");
-        String testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
-        List<InsertOneModel<Document>> testData = Arrays.stream(testDataString.split("\n")).map(Document::parse).map(InsertOneModel::new).collect(Collectors.toList());
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        AtomicReference<HistogramList> result = new AtomicReference<>();
-        MongoCollection<Document> collection = MongoConnection.get().getDatabase(DATABASE_NAME).getCollection("testcollection");
-        collection.drop((aVoid, throwable) -> {
-            assertNull(throwable);
-            collection.bulkWrite(testData, (bulkWriteResult, throwable2) -> {
-                assertNull(throwable2);
 
-                for (int i=0; i < 15; i++) {
-                    HistogramList histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
-                            "1528736400000",
-                            "0",
-                            "CN",
-                            "3000",
-                            "100",
-                            "img-large");
 
-                    result.set(histogramList);
+        HistogramList histogramList = null;
+        for (int i=0; i < 15; i++) {
+            histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
+                    "1528736400000",
+                    "0",
+                    "CN",
+                    "3000",
+                    "100",
+                    "img-large");
+        }
 
-                }
-                countDownLatch.countDown();
-            });
-        });
-
-        countDownLatch.await(10, TimeUnit.SECONDS);
-
-        HistogramList histogramList = result.get();
         assertNotNull("Failed to return a result", histogramList.getHistograms());
         assertEquals(2, histogramList.getHistograms().size());
         assertEquals(30, histogramList.getHistograms().get(0).getBuckets().size());
@@ -77,5 +61,44 @@ public class PerfStatsDataAccessTest {
 
         //check bucket 0 had a greater than 0 count
         assertTrue(histogramList.getHistograms().get(0).getBuckets().get(0).getCount() > 0);
+    }
+
+    @Test
+    public void histogramStatsSince_useDefaults() throws IOException, InterruptedException {
+        HistogramList histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
+                "1528736400000",
+                "",
+                "",
+                "",
+                "",
+                "");
+        assertNotNull(histogramList);
+        assertEquals(1, histogramList.getHistograms().size());
+    }
+
+    private static MongoCollection<Document> intializeTestData() {
+        InputStream testDataResource = PerfStatsDataAccessTest.class.getResourceAsStream("/test-data.json");
+        String testDataString = null;
+        try {
+            testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        List<InsertOneModel<Document>> testData = Arrays.stream(testDataString.split("\n")).map(Document::parse).map(InsertOneModel::new).collect(Collectors.toList());
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        MongoCollection<Document> collection = MongoConnection.get().getDatabase(DATABASE_NAME).getCollection("testcollection");
+        collection.drop((aVoid, throwable) -> {
+            assertNull(throwable);
+            collection.bulkWrite(testData, (bulkWriteResult, throwable2) -> {
+                assertNull(throwable2);
+                countDownLatch.countDown();
+            });
+        });
+        try {
+            countDownLatch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return collection;
     }
 }
