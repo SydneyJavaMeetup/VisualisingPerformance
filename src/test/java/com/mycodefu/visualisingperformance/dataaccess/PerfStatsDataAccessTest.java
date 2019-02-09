@@ -23,13 +23,15 @@ import static org.junit.Assert.*;
 
 public class PerfStatsDataAccessTest {
 
+    private static MongoCollection<Document> collection = intializeTestData();
+
     /**
      * Note: requires local mongodb with the PerfStats collection in the SydneyJavaMeetup database, e.g. run this from the data directory after unzipping the PerfStats.json.zip file:
      * mongoimport PerfStats.json -d SydneyJavaMeetup
      */
     @Test
     public void histogramStatsSince() throws IOException, InterruptedException {
-        MongoCollection<Document> collection = intializeTestData();
+
 
         HistogramList histogramList = null;
         for (int i=0; i < 15; i++) {
@@ -61,9 +63,27 @@ public class PerfStatsDataAccessTest {
         assertTrue(histogramList.getHistograms().get(0).getBuckets().get(0).getCount() > 0);
     }
 
-    private MongoCollection<Document> intializeTestData() throws IOException, InterruptedException {
+    @Test
+    public void histogramStatsSince_useDefaults() throws IOException, InterruptedException {
+        HistogramList histogramList = new PerfStatsDataAccess(collection, false).histogramStatsSince(
+                "1528736400000",
+                "",
+                "",
+                "",
+                "",
+                "");
+        assertNotNull(histogramList);
+        assertEquals(1, histogramList.getHistograms().size());
+    }
+
+    private static MongoCollection<Document> intializeTestData() {
         InputStream testDataResource = PerfStatsDataAccessTest.class.getResourceAsStream("/test-data.json");
-        String testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
+        String testDataString = null;
+        try {
+            testDataString = IOUtils.toString(new InputStreamReader(testDataResource));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         List<InsertOneModel<Document>> testData = Arrays.stream(testDataString.split("\n")).map(Document::parse).map(InsertOneModel::new).collect(Collectors.toList());
         CountDownLatch countDownLatch = new CountDownLatch(1);
         MongoCollection<Document> collection = MongoConnection.get().getDatabase(DATABASE_NAME).getCollection("testcollection");
@@ -74,7 +94,11 @@ public class PerfStatsDataAccessTest {
                 countDownLatch.countDown();
             });
         });
-        countDownLatch.await(10, TimeUnit.SECONDS);
+        try {
+            countDownLatch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         return collection;
     }
 }
